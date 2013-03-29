@@ -1,0 +1,9 @@
+{
+     "name": "clocksync",
+     "description": "Mobile sync",
+     "version": "0.0.1",
+     "dependencies": {
+        "express": "",
+        "socket.io": ""
+     }
+}

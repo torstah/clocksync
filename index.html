@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -5,6 +7,14 @@
 <title>sync poc</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 <script src="libs/buffer-loader.js"></script>
+<style type="text/css">
+	
+	#controls {
+		position: absolute;
+		top: 10px;
+		}
+</style>
+
 <script>
 	// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 // http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
@@ -14,6 +24,7 @@
  
 (function() {
     var lastTime = 0;
+    
     var vendors = ['ms', 'moz', 'webkit', 'o'];
     for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
         window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
@@ -50,8 +61,13 @@
 </head>
 <body>
 
-	<div id="clock"></a>
-
+	<div id="clock"></div>
+	<div id="status"></div>
+	<div id="controls">
+		<input type="submit" id="btn" value="Sound On">
+	</div>
+	
+	<script src="/socket.io/socket.io.js"></script>
 	<script>
 		var localClockOffset = 0;Math.random()*10000;
 		var $clock = $('#clock');
@@ -62,6 +78,26 @@
 		var oscillator;
 		var bufferLoader;
 		var bufferList;
+		var beats = 1;
+		var btn = document.getElementById('btn');
+		var isPlaying = false;
+		var mute = true;
+		var masterVolume = 1;
+
+		var socket = io.connect('http://localhost');
+
+		socket.on('connect', function() {
+			console.log("ja är konncected");
+	        //socket.emit('newuser');
+	    });
+
+	    socket.on('sendbeat', function(data) {
+			console.log("sendbeat",data);
+	       
+	    });
+
+	    
+		
 
 		
 
@@ -72,7 +108,8 @@
 		    context,
 		    [
 		      'sounds/Kick.mp3',
-		      'sounds/beep.mp3'
+		      'sounds/beep.mp3',
+		      'sounds/twinkle.mp3'
 		    ],
 		    finishedLoading
 		    );
@@ -112,7 +149,8 @@
 			var time = nowsync();
 			if (context)
 				scheduleSound(time);
-			$clock.text( time * 0.001 );
+			//$clock.text( time * 0.001 );
+			$clock.text(Math.round(time) );
 		}
 		window.requestAnimationFrame(updateClock);
 
@@ -204,16 +242,24 @@
 				return;
 			}
 
+			//console.log(beats);
+			$('#status').text(beats);
 
+			socket.emit('test',{beats: beats});
 
-			
-			var source1 = context.createBufferSource();
-		 
- 				
-		  	source1.buffer = bufferList[1];
-		
-		  	source1.connect(context.destination);
-		  	source1.noteOn(time);
+			if (beats == 4) {
+				beats = 0
+				playsoundinlist(0)
+
+				if (isPlaying == false){
+					playsoundinlist(2,true)
+					isPlaying = true;
+
+				}
+			}
+
+			beats++;
+			playsoundinlist(1);
 
 		};
 
@@ -221,6 +267,33 @@
 		$('body').on('touchstart', function () {
 			playSyncSound();
 		});
+
+		$('#btn').bind('click', function (e) {
+			if (mute == true) {
+				e.target.value = "Sound Off";
+				mute = false;
+				masterVolume = 1;
+			} else {
+				e.target.value = "Sound On";
+				mute = true;
+				masterVolume = 0;
+			}
+			 
+		});
+
+		var playsoundinlist = function(value,loop){
+			if (mute == false){
+				var loop = loop
+				var source = context.createBufferSource();
+			  	source.buffer = bufferList[value];
+			  	gainNode = context.createGainNode(); 
+			  	source.connect(gainNode);
+			  	gainNode.connect(context.destination);
+			  	source.loop = loop;
+			  	gainNode.gain.value = masterVolume;  
+			  	source.noteOn(0);
+		  	}
+		}
 
 
 		var oscOn = function(time){  
@@ -230,7 +303,7 @@
 			gainNode = context.createGainNode();  
 			oscillator.connect(gainNode);  
 			gainNode.connect(context.destination);  
-			gainNode.gain.value = 1;  
+			gainNode.gain.value = masterVolume;  
 			oscillator.start(0); 
 		}
 
@@ -238,13 +311,13 @@
 			oscillator.disconnect();
 		}
 
-		var playSimpleSound = function(buffer){
+		/*var playSimpleSound = function(buffer){
 			var source = context.createBufferSource();
 			    source.buffer = buffer;
 			    source.connect(context.destination);
 			    source.noteOn(0);
 
-		}
+		}*/
 
 
 

@@ -1,6 +1,10 @@
-var http = require('http');
+
 var express = require("express");
+var http = require('http');
 var app = express();
+var server = http.createServer(app);
+var io = require('socket.io').listen(server, { log: true });
+var beat = 0;
 
 app.configure(function () {
 	app.use(express.bodyParser());
@@ -26,5 +30,28 @@ app.post('/sync', function(req, res) {
 		res.end(JSON.stringify(m));
 });
 
-app.listen(8080);
+server.listen(8000);
+
+io.sockets.on('connection', function (socket) {
+	console.log('Konnekted!');
+
+    socket.on('disconnect', function(){
+       console.log('disconnect');
+	});
+
+	setInterval(function() {
+		if (beat == 4){
+			beat = 0;
+		}
+	
+		socket.emit('sendbeat', { beatnumber: beat });
+		console.log(beat);
+		beat++
+
+
+	}, 1000);
+
+	
+	
+});
 console.log('Server running');
